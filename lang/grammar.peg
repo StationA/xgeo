@@ -1,0 +1,62 @@
+package lang
+
+type XGeoParser Peg {
+}
+
+file <- wsn section* !.
+
+section <- (block / stmt) wsn
+
+block <- if_block
+
+if_block <- 'if' ws '(' ws expr ws ')' ws '{' wsn section* wsn '}'
+
+stmt <- emit / assignment
+
+emit <- 'emit' ws expr
+
+assignment <- ref ws '=' ws expr
+
+expr <- or_expr / primary
+
+primary <- '(' ws expr ws ')' / func_call / literal / ref
+
+or_expr <- and_expr (ws '||' ws and_expr)*
+
+and_expr <- compare_expr (ws '&&' ws compare_expr)*
+
+compare_expr <- add_expr (ws compare_op ws add_expr)*
+
+add_expr <- mult_expr (ws ('+' / '-') ws mult_expr)*
+
+mult_expr <- primary (ws ('*' / '/') ws primary)*
+
+compare_op <- '==' / '!=' / '>=' / '<=' / '>' / '<'
+
+func_call <- ident '(' wsn (expr (wsn ',' wsn expr)*)? wsn ')'
+
+ref <- (global_ref / variable_ref) ('.' variable_ref)*
+
+global_ref <- '@' ident?
+
+variable_ref <- ident
+
+ident <- [A-Za-z_][A-Za-z0-9_]*
+
+literal <- bool / float / int / string / map
+
+float <- '-'? [0-9]+ '.' [0-9]*
+
+int <- '-'? [0-9]+
+
+bool <- 'true' / 'false'
+
+string <- '"' [^"]* '"'
+
+map <- '{' wsn (kv (',' wsn kv)*)? wsn '}'
+
+kv <- string ws ':' wsn expr
+
+ws <- (' ' / '\t')*
+
+wsn <- (' ' / '\t' / '\n')*
