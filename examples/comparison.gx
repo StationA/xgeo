@@ -1,0 +1,66 @@
+if (30.1 > 30.0) {
+    emit "SHOULD 1"
+}
+if (30.1 > 30) {
+    emit "SHOULD 2"
+}
+if (31 > 30.0) {
+    emit "SHOULD 3"
+}
+if (31 > 30) {
+    emit "SHOULD 4"
+}
+if (30.1 >= 30.0) {
+    emit "SHOULD 5"
+}
+if (30 >= 30) {
+    emit "SHOULD 6"
+}
+if (30 >= 30.0) {
+    emit "SHOULD 7"
+}
+if (30.0 >= 30) {
+    emit "SHOULD 8"
+}
+if (30.0 < 30.1) {
+    emit "SHOULD 9"
+}
+if (30 < 30.1) {
+    emit "SHOULD 10"
+}
+if (30.0 < 31) {
+    emit "SHOULD 11"
+}
+if (30 < 31) {
+    emit "SHOULD 12"
+}
+if (30.0 <= 30.1) {
+    emit "SHOULD 13"
+}
+if (30 <= 30) {
+    emit "SHOULD 14"
+}
+if (30 <= 30.0) {
+    emit "SHOULD 15"
+}
+if (30.0 <= 30) {
+    emit "SHOULD 16"
+}
+if (30 > 40) {
+    emit "SHOULD NOT"
+}
+if (30 > 30) {
+    emit "SHOULD NOT"
+}
+if (30 >= 40) {
+    emit "SHOULD NOT"
+}
+if (30 < 20) {
+    emit "SHOULD NOT"
+}
+if (30.0 < 20) {
+    emit "SHOULD NOT"
+}
+if (30 < 30) {
+    emit "SHOULD NOT"
+}

@@ -132,6 +132,31 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 		left := vm.pop()
 		res, _ := left.Eq(right)
 		vm.push(res)
+	case OpNEQ:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Neq(right)
+		vm.push(res)
+	case OpGT:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Gt(right)
+		vm.push(res)
+	case OpGTE:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Gte(right)
+		vm.push(res)
+	case OpLT:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Lt(right)
+		vm.push(res)
+	case OpLTE:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Lte(right)
+		vm.push(res)
 	case OpCOND:
 		shouldJump := !vm.pop().(*Bool).NativeValue
 		if shouldJump {

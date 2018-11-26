@@ -11,6 +11,11 @@ type Value interface {
 	Mul(Value) (Value, error)
 	Div(Value) (Value, error)
 	Eq(Value) (*Bool, error)
+	Neq(Value) (*Bool, error)
+	Gt(Value) (*Bool, error)
+    Gte(Value) (*Bool, error)
+	Lt(Value) (*Bool, error)
+    Lte(Value) (*Bool, error)
 	Raw() interface{}
 	Type() string
 	String() string
@@ -110,6 +115,56 @@ func (i *Int) Eq(val Value) (*Bool, error) {
 	return &Bool{false}, nil
 }
 
+func (i *Int) Neq(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{i.NativeValue != val.NativeValue}, nil
+	case *Float:
+		return &Bool{float64(i.NativeValue) != val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (i *Int) Gt(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{i.NativeValue > val.NativeValue}, nil
+	case *Float:
+		return &Bool{float64(i.NativeValue) > val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (i *Int) Gte(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{i.NativeValue >= val.NativeValue}, nil
+	case *Float:
+		return &Bool{float64(i.NativeValue) >= val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (i *Int) Lt(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{i.NativeValue < val.NativeValue}, nil
+	case *Float:
+		return &Bool{float64(i.NativeValue) < val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (i *Int) Lte(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{i.NativeValue <= val.NativeValue}, nil
+	case *Float:
+		return &Bool{float64(i.NativeValue) <= val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
 type Float struct {
 	NativeValue float64
 }
@@ -176,6 +231,56 @@ func (f *Float) Eq(val Value) (*Bool, error) {
 	return &Bool{false}, nil
 }
 
+func (f *Float) Neq(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{f.NativeValue != float64(val.NativeValue)}, nil
+	case *Float:
+		return &Bool{f.NativeValue != val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (f *Float) Gt(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{f.NativeValue > float64(val.NativeValue)}, nil
+	case *Float:
+		return &Bool{f.NativeValue > val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (f *Float) Gte(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{f.NativeValue >= float64(val.NativeValue)}, nil
+	case *Float:
+		return &Bool{f.NativeValue >= val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (f *Float) Lt(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{f.NativeValue < float64(val.NativeValue)}, nil
+	case *Float:
+		return &Bool{f.NativeValue < val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (f *Float) Lte(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Bool{f.NativeValue <= float64(val.NativeValue)}, nil
+	case *Float:
+		return &Bool{f.NativeValue <= val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
 type Bool struct {
 	NativeValue bool
 }
@@ -214,6 +319,30 @@ func (b *Bool) Eq(val Value) (*Bool, error) {
 		return &Bool{b.NativeValue == val.NativeValue}, nil
 	}
 	return &Bool{false}, nil
+}
+
+func (b *Bool) Neq(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Bool:
+		return &Bool{b.NativeValue != val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (b *Bool) Gt(val Value) (*Bool, error) {
+	return nil, InvalidOperation(">", b, val)
+}
+
+func (b *Bool) Gte(val Value) (*Bool, error) {
+	return nil, InvalidOperation(">=", b, val)
+}
+
+func (b *Bool) Lt(val Value) (*Bool, error) {
+	return nil, InvalidOperation("<", b, val)
+}
+
+func (b *Bool) Lte(val Value) (*Bool, error) {
+	return nil, InvalidOperation("<=", b, val)
 }
 
 type Str struct {
@@ -260,6 +389,30 @@ func (s *Str) Eq(val Value) (*Bool, error) {
 	return &Bool{false}, nil
 }
 
+func (s *Str) Neq(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Str:
+		return &Bool{s.NativeValue != val.NativeValue}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (s *Str) Gt(val Value) (*Bool, error) {
+	return nil, InvalidOperation(">", s, val)
+}
+
+func (s *Str) Gte(val Value) (*Bool, error) {
+	return nil, InvalidOperation(">=", s, val)
+}
+
+func (s *Str) Lt(val Value) (*Bool, error) {
+	return nil, InvalidOperation("<", s, val)
+}
+
+func (s *Str) Lte(val Value) (*Bool, error) {
+	return nil, InvalidOperation("<=", s, val)
+}
+
 type Raw struct {
 	NativeValue interface{}
 }
@@ -294,4 +447,28 @@ func (r *Raw) Div(val Value) (Value, error) {
 
 func (r *Raw) Eq(val Value) (*Bool, error) {
 	return &Bool{r.Raw() == val.Raw()}, nil
+}
+
+func (r *Raw) Neq(val Value) (*Bool, error) {
+	switch val := val.(type) {
+	case *Raw:
+		return &Bool{r.Raw() != val.Raw()}, nil
+	}
+	return &Bool{false}, nil
+}
+
+func (r *Raw) Gt(val Value) (*Bool, error) {
+	return nil, InvalidOperation(">", r, val)
+}
+
+func (r *Raw) Gte(val Value) (*Bool, error) {
+	return nil, InvalidOperation(">=", r, val)
+}
+
+func (r *Raw) Lt(val Value) (*Bool, error) {
+	return nil, InvalidOperation("<", r, val)
+}
+
+func (r *Raw) Lte(val Value) (*Bool, error) {
+	return nil, InvalidOperation("<=", r, val)
 }

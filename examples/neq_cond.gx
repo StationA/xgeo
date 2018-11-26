@@ -1,0 +1,7 @@
+if (30.1 != 30) {
+    if ("a" != "b") {
+        emit "INNER"
+    }
+    emit "OUTER"
+}
+emit "ALWAYS"
