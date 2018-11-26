@@ -15,9 +15,9 @@ const (
 	OpLOAD
 	OpLOADG
 	OpDEREF
+	OpMUT
 	OpCONST
-	OpAND
-	OpOR
+	OpDUP
 	OpEQ
 	OpNEQ
 	OpLT

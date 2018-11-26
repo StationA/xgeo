@@ -3,7 +3,6 @@ package io
 import (
 	"encoding/json"
 	"github.com/stationa/xgeo/model"
-	"github.com/stationa/xgeo/util"
 	"io"
 	"os"
 )
@@ -37,7 +36,7 @@ func (j *JSONLinesReader) Read(out chan interface{}) error {
 		out <- &model.Feature{
 			ID:         val["id"],
 			Type:       val["type"].(string),
-			Properties: util.CastProps(val["properties"]),
+			Properties: model.CastProps(val["properties"]),
 			Geometry:   val["geometry"],
 		}
 	}

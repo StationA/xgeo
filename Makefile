@@ -3,9 +3,9 @@ tools:
 	go get github.com/pointlander/peg
 
 build: tools
-	peg lang/grammar.peg
+	peg vm/grammar.peg
 	stringer -type=Op -trimprefix=Op vm
-	go build
+	go build ./...
 
 install: build
-	go install
+	go install ./...

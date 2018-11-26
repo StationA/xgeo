@@ -77,6 +77,10 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 	code := vm.Code[vm.pc]
 	jmp := 1
 	switch code.Op {
+	case OpDUP:
+		val := vm.pop()
+		vm.push(val)
+		vm.push(val)
 	case OpCONST:
 		index := code.Args[0]
 		if index >= len(vm.Constants) {
@@ -87,9 +91,14 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 		vm.push(&Raw{input})
 	case OpDEREF:
 		prop := vm.pop().(*Str).NativeValue
-		val := vm.pop()
-		res, _ := vm.deref(val, prop)
+		ctx := vm.pop()
+		res, _ := vm.deref(ctx, prop)
 		vm.push(res)
+	case OpMUT:
+		val := vm.pop()
+		prop := vm.pop().(*Str).NativeValue
+		ctx := vm.pop()
+		vm.mut(ctx, prop, val)
 	case OpLOAD:
 		register := code.Args[0]
 		val := vm.registers[register]
@@ -161,10 +170,23 @@ func (vm *XGeoVM) deref(val Value, prop string) (Value, error) {
 	raw := val.Raw()
 	switch raw := raw.(type) {
 	case *model.Feature:
-		return vm.Access(raw, prop), nil
+		return vm.access(raw, prop), nil
 	case map[string]string:
 		return &Str{raw[prop]}, nil
 	default:
 		panic("Unsupported dereference")
 	}
+}
+
+func (vm *XGeoVM) mut(ctx Value, prop string, val Value) error {
+	raw := ctx.Raw()
+	switch raw := raw.(type) {
+	case *model.Feature:
+		return vm.mutate(raw, prop, val)
+	case map[string]string:
+		raw[prop] = val.Raw().(string)
+	default:
+		panic("Unsupported dereference")
+	}
+	return nil
 }

@@ -1,0 +1,112 @@
+package vm
+
+type XGeoCompiler Peg {
+    constants     []Value
+    code          []*Code
+    jumpStack     []*Code
+    registerCount int
+    refs          map[string]int
+}
+
+file <- wsn section* !.
+
+section <- comment / block / stmt
+
+comment <- '//' (!'\n' .)* wsn
+
+block <- if_block
+
+if_block <- if_cond '{' wsn section* wsn '}' wsn (else_block wsn)? {
+    p.SetJump()
+}
+
+if_cond <- 'if' ws '(' ws expr ws ')' wsn {
+    p.AddCondJump()
+}
+
+else_block <- 'else' wsn '{' wsn section* wsn '}' wsn
+
+stmt <- (emit / assignment) wsn
+
+emit <- 'emit' ws expr {
+    p.AddCode(OpEMIT)
+}
+
+assignment <- global_assignment / var_assignment
+
+global_assignment <- <global_ref> {
+    p.PrepareMutate(buffer[begin:end])
+} ws '=' ws expr {
+    p.AddCode(OpMUT)
+}
+
+var_assignment <- <variable_ref> {
+    p.AllocateRef(buffer[begin:end])
+} ws '=' ws expr {
+    p.AddStore()
+}
+
+expr <- or_expr / primary
+
+primary <- '(' ws expr ws ')' / func_call / literal / deref
+
+or_expr <- and_expr (ws '||' ws expr)*
+
+and_expr <- compare_expr (ws '&&' { p.AddCondJump() } ws expr { p.SetJump() })*
+
+compare_expr <- add_expr (ws (
+    '==' ws expr { p.AddCode(OpEQ) }
+  / '!=' ws expr { p.AddCode(OpNEQ) }
+  / '<' ws expr { p.AddCode(OpLT) }
+  / '<=' ws expr { p.AddCode(OpLTE) }
+  / '>' ws expr { p.AddCode(OpGT) }
+  / '>=' ws expr { p.AddCode(OpGTE) }
+))*
+
+add_expr <- mult_expr (ws (
+    '+' ws expr { p.AddCode(OpADD) }
+  / '-' ws expr { p.AddCode(OpSUB) }
+))*
+
+mult_expr <- primary (ws (
+    '*' ws expr { p.AddCode(OpMUL) }
+  / '/' ws expr { p.AddCode(OpDIV) }
+))*
+
+func_call <- deref '(' wsn (expr (wsn ',' wsn expr)*)? wsn ')' {
+    p.AddCode(OpCALL)
+}
+
+ref <- global_ref / variable_ref
+
+deref <- <ref> {
+    p.AddLoad(buffer[begin:end])
+}
+
+global_ref <- '@' (ident ('.' ident)*)?
+
+variable_ref <- ident
+
+ident <- [A-Za-z_][A-Za-z0-9_]*
+
+literal <- bool / float / int / string
+
+float <- <'-'? [0-9]+ '.' [0-9]*> {
+    p.AddConstant(ParseFloat(buffer[begin:end]))
+}
+
+int <- <'-'? [0-9]+> {
+    p.AddConstant(ParseInt(buffer[begin:end]))
+}
+
+bool <- <'true' / 'false'> {
+    p.AddConstant(ParseBool(buffer[begin:end]))
+}
+
+string <- '"' <[^"]*> '"' {
+    p.AddConstant(&Str{buffer[begin:end]})
+}
+
+ws <- (' ' / '\t')*
+
+wsn <- (' ' / '\t' / '\n')*

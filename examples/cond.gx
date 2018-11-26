@@ -1,7 +1,20 @@
-if (30.0 == 30) {
-    if ("a" == "a") {
-        emit "INNER"
+a = true
+b = false
+c = true
+
+if (a) {
+    if (b) {
+        if (c) {
+            value = true
+        } else {
+            value = false
+        }
+    } else {
+        value = false
     }
-    emit "OUTER"
+} else {
+    value = false
 }
-emit "ALWAYS"
+
+// value = a && b && c
+// emit value

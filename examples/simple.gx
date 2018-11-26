@@ -1,3 +1,4 @@
-if (@properties.visible == "true") {
+@properties.name = "Test"
+if (@id == "" && @properties.visible == "true") {
     emit @
 }

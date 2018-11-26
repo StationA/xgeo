@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type Value interface {
@@ -17,6 +18,30 @@ type Value interface {
 
 func InvalidOperation(op string, left, right Value) error {
 	return fmt.Errorf("Invalid operation '%s %s %s'\n", left.Type(), op, right.Type())
+}
+
+func ParseInt(val string) Value {
+	v, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	return &Int{int(v)}
+}
+
+func ParseFloat(val string) Value {
+	v, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		panic(err)
+	}
+	return &Float{v}
+}
+
+func ParseBool(val string) Value {
+	v, err := strconv.ParseBool(val)
+	if err != nil {
+		panic(err)
+	}
+	return &Bool{v}
 }
 
 type Int struct {
@@ -268,9 +293,5 @@ func (r *Raw) Div(val Value) (Value, error) {
 }
 
 func (r *Raw) Eq(val Value) (*Bool, error) {
-	switch val := val.(type) {
-	case *Raw:
-		return &Bool{r.Raw() == val.Raw()}, nil
-	}
-	return &Bool{false}, nil
+	return &Bool{r.Raw() == val.Raw()}, nil
 }

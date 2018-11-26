@@ -4,9 +4,9 @@ package vm
 
 import "strconv"
 
-const _Op_name = "CONDLABELEMITSTORELOADLOADGDEREFCONSTANDOREQNEQLTLTEGTGTECALLADDSUBMULDIV"
+const _Op_name = "CONDLABELEMITSTORELOADLOADGDEREFMUTCONSTDUPEQNEQLTLTEGTGTECALLADDSUBMULDIV"
 
-var _Op_index = [...]uint8{0, 4, 9, 13, 18, 22, 27, 32, 37, 40, 42, 44, 47, 49, 52, 54, 57, 61, 64, 67, 70, 73}
+var _Op_index = [...]uint8{0, 4, 9, 13, 18, 22, 27, 32, 35, 40, 43, 45, 48, 50, 53, 55, 58, 62, 65, 68, 71, 74}
 
 func (i Op) String() string {
 	if i >= Op(len(_Op_index)-1) {

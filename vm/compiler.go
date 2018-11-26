@@ -1,8 +1,7 @@
-package lang
+package vm
 
 import (
 	"fmt"
-	"github.com/stationa/xgeo/vm"
 	"strings"
 )
 
@@ -12,7 +11,7 @@ func (c *XGeoCompiler) Prepare() {
 }
 
 func (c *XGeoCompiler) AddCondJump() {
-	code := c.AddCode(vm.OpCOND, -1)
+	code := c.AddCode(OpCOND, -1)
 	c.jumpStack = append(c.jumpStack, code)
 }
 
@@ -23,45 +22,57 @@ func (c *XGeoCompiler) SetJump() {
 	c.jumpStack = c.jumpStack[:l]
 }
 
-func (c *XGeoCompiler) AddConstant(val vm.Value) {
+func (c *XGeoCompiler) AddConstant(val Value) {
 	index := len(c.constants)
 	for i, constant := range c.constants {
 		// Reuse duplicate constants
 		if constant == val {
-			c.AddCode(vm.OpCONST, i)
+			c.AddCode(OpCONST, i)
 			return
 		}
 	}
-	c.AddCode(vm.OpCONST, index)
+	c.AddCode(OpCONST, index)
 	c.constants = append(c.constants, val)
 }
 
 func (c *XGeoCompiler) AllocateRef(ref string) {
-	if strings.HasPrefix(ref, "@") {
-		panic("Not implemented!")
-	} else {
-		register, refExists := c.refs[ref]
-		if !refExists {
-			register = c.registerCount
-			c.refs[ref] = register
-			c.registerCount += 1
-		}
+	register, refExists := c.refs[ref]
+	if !refExists {
+		register = c.registerCount
+		c.refs[ref] = register
+		c.registerCount += 1
 	}
+}
+
+func (c *XGeoCompiler) PrepareMutate(ref string) {
+	// Trim off the leading "@"
+	path := ref[1:]
+	if path == "" {
+		panic("Cannot mutate the entire input")
+	}
+	c.AddCode(OpLOADG)
+	pathParts := strings.Split(path, ".")
+	l := len(pathParts) - 1
+	for _, prop := range pathParts[:l] {
+		c.AddConstant(&Str{prop})
+		c.AddCode(OpDEREF)
+	}
+	c.AddConstant(&Str{pathParts[l]})
 }
 
 func (c *XGeoCompiler) AddStore() {
 	register := c.registerCount - 1
-	c.AddCode(vm.OpSTORE, register)
+	c.AddCode(OpSTORE, register)
 }
 
 func (c *XGeoCompiler) AddLoad(ref string) {
 	if strings.HasPrefix(ref, "@") {
 		path := ref[1:]
-		c.AddCode(vm.OpLOADG)
+		c.AddCode(OpLOADG)
 		if path != "" {
 			for _, prop := range strings.Split(path, ".") {
-				c.AddConstant(&vm.Str{prop})
-				c.AddCode(vm.OpDEREF)
+				c.AddConstant(&Str{prop})
+				c.AddCode(OpDEREF)
 			}
 		}
 	} else {
@@ -69,12 +80,12 @@ func (c *XGeoCompiler) AddLoad(ref string) {
 		if !refExists {
 			panic(fmt.Errorf("Undefined reference: %s", ref))
 		}
-		c.AddCode(vm.OpLOAD, register)
+		c.AddCode(OpLOAD, register)
 	}
 }
 
-func (c *XGeoCompiler) AddCode(op vm.Op, args ...int) *vm.Code {
-	code := &vm.Code{op, args}
+func (c *XGeoCompiler) AddCode(op Op, args ...int) *Code {
+	code := &Code{op, args}
 	c.code = append(c.code, code)
 	return code
 }
@@ -85,8 +96,8 @@ func (c *XGeoCompiler) Compile() error {
 	return nil
 }
 
-func (c *XGeoCompiler) InitVM() *vm.XGeoVM {
-	v := vm.NewVM(c.registerCount)
+func (c *XGeoCompiler) InitVM() *XGeoVM {
+	v := NewVM(c.registerCount)
 	v.Constants = c.constants[:]
 	v.Code = c.code[:]
 	return v
