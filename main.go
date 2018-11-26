@@ -1,48 +1,154 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	io "github.com/stationa/xgeo/io"
 	gx "github.com/stationa/xgeo/lang"
-	xgeo "github.com/stationa/xgeo/lib"
+	model "github.com/stationa/xgeo/model"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
+	"runtime"
 	"strings"
+	"sync"
+)
+
+const (
+	WorkersPerCPU = 2
 )
 
 var (
 	sourceFiles = kingpin.Arg("source", "Source file").Strings()
-	gxFile      = kingpin.Flag("gx", "GX script").Short('g').String()
+	gxFile      = kingpin.Flag("gx", "GX script").Short('g').File()
+	debug       = kingpin.Flag("debug", "Debug mode").Short('d').Bool()
+	parallelism = kingpin.Flag("parallelism", "Number of cores to use").Short('p').Default("0").Int()
+	workers     = kingpin.Flag("num-workers", "Number of workers to use").Short('w').Default("0").Int()
 )
+
+// Adapted from https://blog.golang.org/pipelines
+func merge(cs ...chan *model.Feature) <-chan *model.Feature {
+	var wg sync.WaitGroup
+	out := make(chan *model.Feature)
+
+	// Start an output goroutine for each input channel in cs.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(c chan *model.Feature) {
+		defer wg.Done()
+		for n := range c {
+			out <- n
+		}
+	}
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
 
 func main() {
 	kingpin.Parse()
 
-	if *gxFile != "" {
-		data, err := ioutil.ReadFile(*gxFile)
-		if err != nil {
-			panic(err)
-		}
-		parser := &gx.XGeoParser{Buffer: string(data)}
-		parser.Init()
-		err = parser.Parse()
-		if err != nil {
-			fmt.Print(err)
-			panic(err)
-		}
-		parser.PrintSyntaxTree()
+	if *parallelism < 1 {
+		*parallelism = runtime.NumCPU()
 	}
+	runtime.GOMAXPROCS(*parallelism)
+
+	if *workers < 1 {
+		*workers = *parallelism * WorkersPerCPU
+	}
+
+	var inputs []chan *model.Feature
 	if len(*sourceFiles) > 0 {
 		for _, sourceFile := range *sourceFiles {
+			var reader io.FeatureReader
+			var err error
 			if strings.HasSuffix(sourceFile, ".zip") || strings.HasSuffix(sourceFile, ".shp") {
-				reader, _ := xgeo.NewShapefileReader(sourceFile)
-				reader.Read()
+				reader, err = io.NewShapefileReader(sourceFile)
 			}
 			if strings.HasSuffix(sourceFile, ".geojson") {
-				reader, _ := xgeo.NewGeoJSONReader(sourceFile)
-				reader.Read()
+				reader, err = io.NewGeoJSONReader(sourceFile)
 			}
+			if strings.HasSuffix(sourceFile, ".jsonlines") {
+				reader, err = io.NewJSONLinesReader(sourceFile)
+			}
+			if err != nil {
+				panic(err)
+			}
+			input := make(chan *model.Feature)
+			inputs = append(inputs, input)
+			go func() {
+				defer close(input)
+				err := reader.Read(input)
+				if err != nil {
+					panic(err)
+				}
+			}()
 		}
 	} else {
 		fmt.Println("IMPLEMENT STDIN PROCESSING")
+	}
+
+	input := merge(inputs...)
+
+	var outputs []chan *model.Feature
+	if *gxFile != nil {
+		data, err := ioutil.ReadAll(*gxFile)
+		if err != nil {
+			panic(err)
+		}
+		compiler := &gx.XGeoCompiler{Buffer: string(data)}
+		compiler.Prepare()
+		if err := compiler.Parse(); err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
+		if err := compiler.Compile(); err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
+
+		for i := 0; i < *workers; i++ {
+			output := make(chan *model.Feature)
+			outputs = append(outputs, output)
+			vm := compiler.InitVM()
+			if *debug {
+				vm.SetDebug(true)
+			}
+			go func() {
+				defer close(output)
+				for feature := range input {
+					output <- vm.Run(feature)
+				}
+			}()
+		}
+	} else {
+		output := make(chan *model.Feature)
+		outputs = append(outputs, output)
+		go func() {
+			defer close(output)
+			for feature := range input {
+				output <- feature
+			}
+		}()
+	}
+
+	output := merge(outputs...)
+
+	for feature := range output {
+		if feature == nil {
+			continue
+		}
+		json, err := json.Marshal(feature)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(json))
 	}
 }

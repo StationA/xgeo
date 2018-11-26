@@ -1,61 +1,101 @@
 package lang
 
-type XGeoParser Peg {
+import "github.com/stationa/xgeo/vm"
+
+type XGeoCompiler Peg {
+    constants     []vm.Value
+    code          []*vm.Code
+    jumpStack     []*vm.Code
+    registerCount int
+    refs          map[string]int
 }
 
 file <- wsn section* !.
 
-section <- (block / stmt) wsn
+section <- block / stmt
 
 block <- if_block
 
-if_block <- 'if' ws '(' ws expr ws ')' ws '{' wsn section* wsn '}'
+if_block <- if_cond '{' wsn section* wsn '}' wsn {
+    p.SetJump()
+}
 
-stmt <- emit / assignment
+if_cond <- 'if' ws '(' ws expr ws ')' wsn {
+    p.AddCondJump()
+}
 
-emit <- 'emit' ws expr
+stmt <- (emit / assignment) wsn
 
-assignment <- ref ws '=' ws expr
+emit <- 'emit' ws expr {
+    p.AddCode(vm.OpEMIT)
+}
+
+assignment <- <ref> {
+    p.AllocateRef(buffer[begin:end])
+} ws '=' ws expr {
+    p.AddStore()
+}
 
 expr <- or_expr / primary
 
-primary <- '(' ws expr ws ')' / func_call / literal / ref
+primary <- '(' ws expr ws ')' / func_call / literal / deref
 
-or_expr <- and_expr (ws '||' ws and_expr)*
+or_expr <- and_expr (ws '||' ws expr { p.AddCode(vm.OpAND) })*
 
-and_expr <- compare_expr (ws '&&' ws compare_expr)*
+and_expr <- compare_expr (ws '&&' ws expr { p.AddCode(vm.OpOR) })*
 
-compare_expr <- add_expr (ws compare_op ws add_expr)*
+compare_expr <- add_expr (ws (
+    '==' ws expr { p.AddCode(vm.OpEQ) }
+  / '!=' ws expr { p.AddCode(vm.OpNEQ) }
+  / '<' ws expr { p.AddCode(vm.OpLT) }
+  / '<=' ws expr { p.AddCode(vm.OpLTE) }
+  / '>' ws expr { p.AddCode(vm.OpGT) }
+  / '>=' ws expr { p.AddCode(vm.OpGTE) }
+))*
 
-add_expr <- mult_expr (ws ('+' / '-') ws mult_expr)*
+add_expr <- mult_expr (ws (
+    '+' ws expr { p.AddCode(vm.OpADD) }
+  / '-' ws expr { p.AddCode(vm.OpSUB) }
+))*
 
-mult_expr <- primary (ws ('*' / '/') ws primary)*
+mult_expr <- primary (ws (
+    '*' ws expr { p.AddCode(vm.OpMUL) }
+  / '/' ws expr { p.AddCode(vm.OpDIV) }
+))*
 
-compare_op <- '==' / '!=' / '>=' / '<=' / '>' / '<'
+func_call <- deref '(' wsn (expr (wsn ',' wsn expr)*)? wsn ')' {
+    p.AddCode(vm.OpCALL)
+}
 
-func_call <- ident '(' wsn (expr (wsn ',' wsn expr)*)? wsn ')'
+ref <- global_ref / variable_ref
 
-ref <- (global_ref / variable_ref) ('.' variable_ref)*
+deref <- <ref> {
+    p.AddLoad(buffer[begin:end])
+}
 
-global_ref <- '@' ident?
+global_ref <- '@' (ident ('.' ident)*)?
 
 variable_ref <- ident
 
 ident <- [A-Za-z_][A-Za-z0-9_]*
 
-literal <- bool / float / int / string / map
+literal <- bool / float / int / string
 
-float <- '-'? [0-9]+ '.' [0-9]*
+float <- <'-'? [0-9]+ '.' [0-9]*> {
+    p.AddConstant(ParseFloat(buffer[begin:end]))
+}
 
-int <- '-'? [0-9]+
+int <- <'-'? [0-9]+> {
+    p.AddConstant(ParseInt(buffer[begin:end]))
+}
 
-bool <- 'true' / 'false'
+bool <- <'true' / 'false'> {
+    p.AddConstant(ParseBool(buffer[begin:end]))
+}
 
-string <- '"' [^"]* '"'
-
-map <- '{' wsn (kv (',' wsn kv)*)? wsn '}'
-
-kv <- string ws ':' wsn expr
+string <- <'"' [^"]* '"'> {
+    p.AddConstant(&vm.Str{buffer[begin:end]})
+}
 
 ws <- (' ' / '\t')*
 

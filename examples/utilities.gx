@@ -2,11 +2,10 @@ if (@properties.OWNER_TYPE == "INVESTOR OWNED") {
     @id = pluscode(centroid(@geometry), 6)
     @geometry = buffer(@geometry, 0)
     @geometry = simplify(@geometry, 0.001)
-    @properties = {
-        "objectid": "utility." + @properties.OBJECTID,
-        "name": title(@properties.NAME),
-        "url": @properties.WEBSITE
-    }
+    @properties = props()
+    @properties.objectid = "utility." + @properties.OBJECTID
+    @properties.name = title(@properties.NAME)
+    @properties.url = @properties.WEBSITE
     if (@properties.CUSTOMERS > 0) {
         @properties.total_customers = @properties.CUSTOMERS
     }
