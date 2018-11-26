@@ -1,10 +1,8 @@
 package vm
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/stationa/xgeo/model"
-	"os"
 )
 
 const (
@@ -14,6 +12,7 @@ const (
 type XGeoVM struct {
 	Constants     []Value
 	Code          []*Code
+	dumpOnCrash   bool
 	debug         bool
 	registerCount int
 	registers     []Value
@@ -28,74 +27,12 @@ func NewVM(registerCount int) *XGeoVM {
 	}
 }
 
+func (vm *XGeoVM) SetDumpOnCrash(doIt bool) {
+	vm.dumpOnCrash = doIt
+}
+
 func (vm *XGeoVM) SetDebug(debug bool) {
 	vm.debug = debug
-}
-
-func (vm *XGeoVM) DumpConstants() {
-	fmt.Println("Constants table:")
-	for i, constant := range vm.Constants {
-		fmt.Printf("  [%d] = %v\n", i, constant)
-	}
-}
-
-func (vm *XGeoVM) DumpRegisters() {
-	fmt.Println("Registers:")
-	for i, val := range vm.registers[:vm.registerCount] {
-		fmt.Printf("  [%d] = %v\n", i, val)
-	}
-}
-
-func (vm *XGeoVM) DumpStack() {
-	fmt.Println("Stack:")
-	for i, _ := range vm.stack {
-		fmt.Print("  ")
-		if i == 0 {
-			fmt.Print("→ ")
-		} else {
-			fmt.Print("| ")
-		}
-		v := vm.stack[len(vm.stack)-i-1]
-		fmt.Printf("%s\n", v)
-	}
-	if len(vm.stack) == 0 {
-		fmt.Println("  <empty>")
-	}
-}
-
-func (vm *XGeoVM) DumpCode() {
-	fmt.Println("Code listing:")
-	for i, code := range vm.Code {
-		fmt.Print("  ")
-		if i == vm.pc {
-			fmt.Print("*")
-		} else {
-			fmt.Print("@")
-		}
-		fmt.Printf("  %d : %v\n", i, code)
-	}
-}
-
-func (vm *XGeoVM) DumpState() {
-	fmt.Print("====== VM STATE ======\n\n")
-	vm.DumpRegisters()
-	vm.DumpStack()
-	fmt.Print("\n======================\n\n")
-}
-
-func (vm *XGeoVM) DumpStep() {
-	fmt.Printf("========= @%d =========\n\n", vm.pc)
-	vm.DumpRegisters()
-	vm.DumpStack()
-	fmt.Println("Step:")
-	for i, code := range vm.Code {
-		if i == vm.pc {
-			fmt.Printf("  *%d : %v\n", i, code)
-		}
-	}
-	fmt.Print("\n======================\n\n")
-	fmt.Print("Press <ENTER> to continue...\n")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
 func (vm *XGeoVM) Reset() {
@@ -107,7 +44,9 @@ func (vm *XGeoVM) Reset() {
 func (vm *XGeoVM) Run(input interface{}, output chan interface{}) error {
 	defer func() {
 		if r := recover(); r != nil {
-			vm.DumpState()
+			if vm.dumpOnCrash {
+				vm.DumpState()
+			}
 			panic(r)
 		}
 	}()
@@ -116,77 +55,92 @@ func (vm *XGeoVM) Run(input interface{}, output chan interface{}) error {
 		vm.DumpConstants()
 		vm.DumpCode()
 	}
-	for vm.pc < len(vm.Code) {
+	for {
 		if vm.debug {
 			vm.DumpStep()
 		}
-		code := vm.Code[vm.pc]
-		jmp := 1
-		switch code.Op {
-		case OpCONST:
-			index := code.Args[0]
-			if index >= len(vm.Constants) {
-				panic("Invalid constant access")
-			}
-			vm.push(vm.Constants[index])
-		case OpLOADG:
-			vm.push(&Raw{input})
-		case OpDEREF:
-			prop := vm.pop().(*Str).NativeValue
-			val := vm.pop()
-			res, _ := vm.deref(val, prop)
-			vm.push(res)
-		case OpLOAD:
-			register := code.Args[0]
-			val := vm.registers[register]
-			vm.push(val)
-		case OpSTORE:
-			val := vm.pop()
-			register := code.Args[0]
-			vm.registers[register] = val
-		case OpADD:
-			right := vm.pop()
-			left := vm.pop()
-			res, _ := left.Add(right)
-			vm.push(res)
-		case OpSUB:
-			right := vm.pop()
-			left := vm.pop()
-			res, _ := left.Sub(right)
-			vm.push(res)
-		case OpMUL:
-			right := vm.pop()
-			left := vm.pop()
-			res, _ := left.Mul(right)
-			vm.push(res)
-		case OpDIV:
-			right := vm.pop()
-			left := vm.pop()
-			res, _ := left.Div(right)
-			vm.push(res)
-		case OpEQ:
-			right := vm.pop()
-			left := vm.pop()
-			res, _ := left.Eq(right)
-			vm.push(res)
-		case OpCOND:
-			shouldJump := !vm.pop().(*Bool).NativeValue
-			if shouldJump {
-				ip := code.Args[0]
-				jmp = ip - vm.pc
-			}
-		case OpEMIT:
-			val := vm.pop()
-			output <- val.Raw()
-		default:
-			panic(fmt.Errorf("Op-code not yet implemented!: %s", code.Op))
+		stop, err := vm.step(input, output)
+		if err != nil {
+			return err
 		}
-		vm.pc += jmp
+		if stop {
+			break
+		}
 	}
 	if vm.debug {
 		vm.DumpState()
 	}
 	return nil
+}
+
+func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error) {
+	code := vm.Code[vm.pc]
+	jmp := 1
+	switch code.Op {
+	case OpCONST:
+		index := code.Args[0]
+		if index >= len(vm.Constants) {
+			panic("Invalid constant access")
+		}
+		vm.push(vm.Constants[index])
+	case OpLOADG:
+		vm.push(&Raw{input})
+	case OpDEREF:
+		prop := vm.pop().(*Str).NativeValue
+		val := vm.pop()
+		res, _ := vm.deref(val, prop)
+		vm.push(res)
+	case OpLOAD:
+		register := code.Args[0]
+		val := vm.registers[register]
+		vm.push(val)
+	case OpSTORE:
+		val := vm.pop()
+		register := code.Args[0]
+		vm.registers[register] = val
+	case OpADD:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Add(right)
+		vm.push(res)
+	case OpSUB:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Sub(right)
+		vm.push(res)
+	case OpMUL:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Mul(right)
+		vm.push(res)
+	case OpDIV:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Div(right)
+		vm.push(res)
+	case OpEQ:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Eq(right)
+		vm.push(res)
+	case OpCOND:
+		shouldJump := !vm.pop().(*Bool).NativeValue
+		if shouldJump {
+			ip := code.Args[0]
+			jmp = ip - vm.pc
+		}
+	case OpEMIT:
+		val := vm.pop()
+		output <- val.Raw()
+	default:
+		panic(fmt.Errorf("Op-code not yet implemented!: %s", code.Op))
+	}
+	vm.pc += jmp
+	if vm.pc >= len(vm.Code) {
+		// Stop if the program counter hits the end of the code
+		return true, nil
+	}
+	return false, nil
 }
 
 func (vm *XGeoVM) push(val Value) {

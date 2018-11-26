@@ -20,6 +20,7 @@ var (
 	sourceFiles = kingpin.Arg("source", "Source file").Strings()
 	gxFile      = kingpin.Flag("gx", "GX script").Short('g').File()
 	debug       = kingpin.Flag("debug", "Debug mode").Short('d').Bool()
+	dumpOnCrash = kingpin.Flag("dump-on-crash", "Dumps the VM state on crash").Short('x').Bool()
 	parallelism = kingpin.Flag("parallelism", "Number of cores to use").Short('p').Default("0").Int()
 	workers     = kingpin.Flag("num-workers", "Number of workers to use").Short('w').Default("0").Int()
 )
@@ -119,6 +120,9 @@ func main() {
 			vm := compiler.InitVM()
 			if *debug {
 				vm.SetDebug(true)
+			}
+			if *dumpOnCrash {
+				vm.SetDumpOnCrash(true)
 			}
 			go func() {
 				defer close(output)
