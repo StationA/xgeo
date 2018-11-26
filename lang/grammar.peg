@@ -12,7 +12,9 @@ type XGeoCompiler Peg {
 
 file <- wsn section* !.
 
-section <- block / stmt
+section <- comment / block / stmt
+
+comment <- '//' (!'\n' .)* wsn
 
 block <- if_block
 
