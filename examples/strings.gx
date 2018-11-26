@@ -1,0 +1,3 @@
+a = "SOME STRING"
+b = lower(a)
+emit b

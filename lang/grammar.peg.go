@@ -4,6 +4,7 @@ package lang
 
 import (
 	"fmt"
+	"github.com/stationa/xgeo/util"
 	"github.com/stationa/xgeo/vm"
 	"io"
 	"math"
@@ -401,15 +402,15 @@ func (p *XGeoCompiler) Execute() {
 
 		case ruleAction19:
 
-			p.AddConstant(ParseFloat(buffer[begin:end]))
+			p.AddConstant(util.ParseFloat(buffer[begin:end]))
 
 		case ruleAction20:
 
-			p.AddConstant(ParseInt(buffer[begin:end]))
+			p.AddConstant(util.ParseInt(buffer[begin:end]))
 
 		case ruleAction21:
 
-			p.AddConstant(ParseBool(buffer[begin:end]))
+			p.AddConstant(util.ParseBool(buffer[begin:end]))
 
 		case ruleAction22:
 
@@ -1871,7 +1872,7 @@ func (p *XGeoCompiler) Init() {
 			return true
 		},
 		/* 49 Action19 <- <{
-		    p.AddConstant(ParseFloat(buffer[begin:end]))
+		    p.AddConstant(util.ParseFloat(buffer[begin:end]))
 		}> */
 		func() bool {
 			{
@@ -1880,7 +1881,7 @@ func (p *XGeoCompiler) Init() {
 			return true
 		},
 		/* 50 Action20 <- <{
-		    p.AddConstant(ParseInt(buffer[begin:end]))
+		    p.AddConstant(util.ParseInt(buffer[begin:end]))
 		}> */
 		func() bool {
 			{
@@ -1889,7 +1890,7 @@ func (p *XGeoCompiler) Init() {
 			return true
 		},
 		/* 51 Action21 <- <{
-		    p.AddConstant(ParseBool(buffer[begin:end]))
+		    p.AddConstant(util.ParseBool(buffer[begin:end]))
 		}> */
 		func() bool {
 			{

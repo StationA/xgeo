@@ -1,6 +1,7 @@
 package lang
 
 import "github.com/stationa/xgeo/vm"
+import "github.com/stationa/xgeo/util"
 
 type XGeoCompiler Peg {
     constants     []vm.Value
@@ -84,15 +85,15 @@ ident <- [A-Za-z_][A-Za-z0-9_]*
 literal <- bool / float / int / string
 
 float <- <'-'? [0-9]+ '.' [0-9]*> {
-    p.AddConstant(ParseFloat(buffer[begin:end]))
+    p.AddConstant(util.ParseFloat(buffer[begin:end]))
 }
 
 int <- <'-'? [0-9]+> {
-    p.AddConstant(ParseInt(buffer[begin:end]))
+    p.AddConstant(util.ParseInt(buffer[begin:end]))
 }
 
 bool <- <'true' / 'false'> {
-    p.AddConstant(ParseBool(buffer[begin:end]))
+    p.AddConstant(util.ParseBool(buffer[begin:end]))
 }
 
 string <- '"' <[^"]*> '"' {
