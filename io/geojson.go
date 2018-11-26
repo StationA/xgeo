@@ -20,7 +20,7 @@ func NewGeoJSONReader(filename string) (*GeoJSONReader, error) {
 	}, nil
 }
 
-func (g *GeoJSONReader) Read(out chan *model.Feature) error {
+func (g *GeoJSONReader) Read(out chan interface{}) error {
 	defer g.inFile.Close()
 	decoder := jstream.NewDecoder(g.inFile, 2)
 	for mv := range decoder.Stream() {

@@ -93,7 +93,7 @@ bool <- <'true' / 'false'> {
     p.AddConstant(ParseBool(buffer[begin:end]))
 }
 
-string <- <'"' [^"]* '"'> {
+string <- '"' <[^"]*> '"' {
     p.AddConstant(&vm.Str{buffer[begin:end]})
 }
 

@@ -22,7 +22,7 @@ func NewJSONLinesReader(filename string) (*JSONLinesReader, error) {
 	}, nil
 }
 
-func (j *JSONLinesReader) Read(out chan *model.Feature) error {
+func (j *JSONLinesReader) Read(out chan interface{}) error {
 	defer j.inFile.Close()
 	dec := json.NewDecoder(j.inFile)
 	for {

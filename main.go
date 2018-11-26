@@ -5,7 +5,6 @@ import (
 	"fmt"
 	io "github.com/stationa/xgeo/io"
 	gx "github.com/stationa/xgeo/lang"
-	model "github.com/stationa/xgeo/model"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"runtime"
@@ -26,13 +25,13 @@ var (
 )
 
 // Adapted from https://blog.golang.org/pipelines
-func merge(cs ...chan *model.Feature) <-chan *model.Feature {
+func merge(cs ...chan interface{}) <-chan interface{} {
 	var wg sync.WaitGroup
-	out := make(chan *model.Feature)
+	out := make(chan interface{})
 
 	// Start an output goroutine for each input channel in cs.  output
 	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(c chan *model.Feature) {
+	output := func(c chan interface{}) {
 		defer wg.Done()
 		for n := range c {
 			out <- n
@@ -64,7 +63,7 @@ func main() {
 		*workers = *parallelism * WorkersPerCPU
 	}
 
-	var inputs []chan *model.Feature
+	var inputs []chan interface{}
 	if len(*sourceFiles) > 0 {
 		for _, sourceFile := range *sourceFiles {
 			var reader io.FeatureReader
@@ -81,7 +80,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			input := make(chan *model.Feature)
+			input := make(chan interface{})
 			inputs = append(inputs, input)
 			go func() {
 				defer close(input)
@@ -97,7 +96,7 @@ func main() {
 
 	input := merge(inputs...)
 
-	var outputs []chan *model.Feature
+	var outputs []chan interface{}
 	if *gxFile != nil {
 		data, err := ioutil.ReadAll(*gxFile)
 		if err != nil {
@@ -115,7 +114,7 @@ func main() {
 		}
 
 		for i := 0; i < *workers; i++ {
-			output := make(chan *model.Feature)
+			output := make(chan interface{})
 			outputs = append(outputs, output)
 			vm := compiler.InitVM()
 			if *debug {
@@ -124,12 +123,12 @@ func main() {
 			go func() {
 				defer close(output)
 				for feature := range input {
-					output <- vm.Run(feature)
+					vm.Run(feature, output)
 				}
 			}()
 		}
 	} else {
-		output := make(chan *model.Feature)
+		output := make(chan interface{})
 		outputs = append(outputs, output)
 		go func() {
 			defer close(output)

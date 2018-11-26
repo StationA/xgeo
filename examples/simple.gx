@@ -1,2 +1,3 @@
-@properties.name = "Test"
-emit @
+if (@properties.visible == "true") {
+    emit @
+}

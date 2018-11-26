@@ -104,7 +104,7 @@ func (vm *XGeoVM) Reset() {
 	vm.pc = 0
 }
 
-func (vm *XGeoVM) Run(feature *model.Feature) *model.Feature {
+func (vm *XGeoVM) Run(input interface{}, output chan interface{}) error {
 	defer func() {
 		if r := recover(); r != nil {
 			vm.DumpState()
@@ -130,11 +130,12 @@ func (vm *XGeoVM) Run(feature *model.Feature) *model.Feature {
 			}
 			vm.push(vm.Constants[index])
 		case OpLOADG:
-			vm.push(&Raw{feature})
+			vm.push(&Raw{input})
 		case OpDEREF:
 			prop := vm.pop().(*Str).NativeValue
 			val := vm.pop()
-			vm.deref(val, prop)
+			res, _ := vm.deref(val, prop)
+			vm.push(res)
 		case OpLOAD:
 			register := code.Args[0]
 			val := vm.registers[register]
@@ -176,7 +177,7 @@ func (vm *XGeoVM) Run(feature *model.Feature) *model.Feature {
 			}
 		case OpEMIT:
 			val := vm.pop()
-			vm.emit(val)
+			output <- val.Raw()
 		default:
 			panic(fmt.Errorf("Op-code not yet implemented!: %s", code.Op))
 		}
@@ -185,7 +186,7 @@ func (vm *XGeoVM) Run(feature *model.Feature) *model.Feature {
 	if vm.debug {
 		vm.DumpState()
 	}
-	return feature
+	return nil
 }
 
 func (vm *XGeoVM) push(val Value) {
@@ -212,8 +213,4 @@ func (vm *XGeoVM) deref(val Value, prop string) (Value, error) {
 	default:
 		panic("Unsupported dereference")
 	}
-}
-
-func (vm *XGeoVM) emit(val Value) {
-	fmt.Printf("Emitting value: %v\n", val)
 }

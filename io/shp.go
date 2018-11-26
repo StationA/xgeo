@@ -26,7 +26,7 @@ func NewShapefileReader(filename string) (*ShapefileReader, error) {
 	}, nil
 }
 
-func (s *ShapefileReader) Read(out chan *model.Feature) error {
+func (s *ShapefileReader) Read(out chan interface{}) error {
 	defer s.reader.Close()
 	fields := s.reader.Fields()
 	for s.reader.Next() {

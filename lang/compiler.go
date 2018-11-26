@@ -56,10 +56,13 @@ func (c *XGeoCompiler) AddStore() {
 
 func (c *XGeoCompiler) AddLoad(ref string) {
 	if strings.HasPrefix(ref, "@") {
+		path := ref[1:]
 		c.AddCode(vm.OpLOADG)
-		for _, prop := range strings.Split(ref[1:], ".") {
-			c.AddConstant(&vm.Str{prop})
-			c.AddCode(vm.OpDEREF)
+		if path != "" {
+			for _, prop := range strings.Split(path, ".") {
+				c.AddConstant(&vm.Str{prop})
+				c.AddCode(vm.OpDEREF)
+			}
 		}
 	} else {
 		register, refExists := c.refs[ref]

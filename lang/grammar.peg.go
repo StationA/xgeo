@@ -1608,17 +1608,17 @@ func (p *XGeoCompiler) Init() {
 			position, tokenIndex = position120, tokenIndex120
 			return false
 		},
-		/* 25 string <- <(<('"' (!'"' .)* '"')> Action22)> */
+		/* 25 string <- <('"' <(!'"' .)*> '"' Action22)> */
 		func() bool {
 			position125, tokenIndex125 := position, tokenIndex
 			{
 				position126 := position
+				if buffer[position] != rune('"') {
+					goto l125
+				}
+				position++
 				{
 					position127 := position
-					if buffer[position] != rune('"') {
-						goto l125
-					}
-					position++
 				l128:
 					{
 						position129, tokenIndex129 := position, tokenIndex
@@ -1639,12 +1639,12 @@ func (p *XGeoCompiler) Init() {
 					l129:
 						position, tokenIndex = position129, tokenIndex129
 					}
-					if buffer[position] != rune('"') {
-						goto l125
-					}
-					position++
 					add(rulePegText, position127)
 				}
+				if buffer[position] != rune('"') {
+					goto l125
+				}
+				position++
 				if !_rules[ruleAction22]() {
 					goto l125
 				}
