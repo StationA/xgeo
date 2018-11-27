@@ -10,6 +10,28 @@ func (c *XGeoCompiler) Prepare() {
 	c.refs = make(map[string]int)
 }
 
+func (c *XGeoCompiler) StartCall(funcName string) {
+	builtin := LookupBuiltin(funcName)
+	call := &Code{
+		OpCALL,
+		[]int{builtin, 0},
+	}
+	c.callStack = append(c.callStack, call)
+}
+
+func (c *XGeoCompiler) AddCallArg() {
+	l := len(c.callStack) - 1
+	lastCall := c.callStack[l]
+	lastCall.Args[1] += 1
+}
+
+func (c *XGeoCompiler) EmitCall() {
+	l := len(c.callStack) - 1
+	lastCall := c.callStack[l]
+	c.EmitCode(lastCall.Op, lastCall.Args...)
+	c.callStack = c.callStack[:l]
+}
+
 func (c *XGeoCompiler) EmitJumpIfFalse() {
 	code := c.EmitCode(OpJMPF, -1)
 	c.jumpStack = append(c.jumpStack, code)

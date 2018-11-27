@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	gx "github.com/stationa/xgeo/vm"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -52,7 +53,11 @@ func main() {
 			vm.Run(nil, output)
 		}()
 		for o := range output {
-			fmt.Println(o)
+			json, err := json.Marshal(o)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(json))
 		}
 	}
 }

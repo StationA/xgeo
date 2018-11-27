@@ -168,6 +168,16 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 			ip := code.Args[0]
 			jmp = ip - vm.pc
 		}
+	case OpCALL:
+		builtinIndex := code.Args[0]
+		nargs := code.Args[1]
+		builtin := Builtins[builtinIndex]
+		args := make([]Value, nargs)
+		for i := 0; i < nargs; i++ {
+			args[nargs-i-1] = vm.pop()
+		}
+		res, _ := builtin.Call(args...)
+		vm.push(res)
 	case OpEMIT:
 		val := vm.pop()
 		output <- val.Raw()

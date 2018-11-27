@@ -6,6 +6,7 @@ type XGeoCompiler Peg {
     jumpStack     []*Code
     registerCount int
     refs          map[string]int
+    callStack     []*Code
 }
 
 file <- wsn section* !.
@@ -84,8 +85,10 @@ mult_expr <- primary (ws (
   / '/' ws primary { p.EmitCode(OpDIV) }
 ))*
 
-func_call <- deref '(' wsn (expr (wsn ',' wsn expr)*)? wsn ')' {
-    p.EmitCode(OpCALL)
+func_call <- <ref> {
+    p.StartCall(buffer[begin:end])
+} '(' wsn (expr { p.AddCallArg() } (wsn ',' wsn expr { p.AddCallArg() })*)? wsn ')' {
+    p.EmitCall()
 }
 
 ref <- global_ref / variable_ref

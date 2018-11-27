@@ -5,105 +5,303 @@ import (
 	"strings"
 )
 
+type Signature struct {
+	Accepts []Value
+	Returns Value
+}
+
+func (s *Signature) Matches(args ...Value) bool {
+	if len(s.Accepts) != len(args) {
+		return false
+	}
+	for i, argType := range s.Accepts {
+		if argType.Type() != args[i].Type() {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Signature) Display(funcName string) string {
+	argString := ""
+	returnString := "?"
+	if s.Accepts != nil && len(s.Accepts) > 0 {
+		var argTypes []string
+		for _, argType := range s.Accepts {
+			argTypes = append(argTypes, argType.Type())
+		}
+		argString = strings.Join(argTypes, ",")
+	}
+	if s.Returns != nil {
+		returnString = s.Returns.Type()
+	}
+	return fmt.Sprintf("%s(%s) -> %s", funcName, argString, returnString)
+}
+
+type NativeCall struct {
+	Signature *Signature
+	Call      func(args ...Value) (Value, error)
+}
+
+type Builtin struct {
+	Name        string
+	NativeCalls []*NativeCall
+}
+
+func (b *Builtin) Call(args ...Value) (Value, error) {
+	for _, call := range b.NativeCalls {
+		if call.Signature.Matches(args...) {
+			return call.Call(args...)
+		}
+	}
+	expectedSignature := &Signature{Accepts: args}
+	expectedCall := expectedSignature.Display(b.Name)
+	return nil, fmt.Errorf("No matching function call: %s", expectedCall)
+}
+
 func typeError(val Value, funcSig string) error {
 	return fmt.Errorf("Invalid type %T for function %s", val, funcSig)
 }
 
-func Lower(args ...Value) (Value, error) {
-	val := args[0]
-	str, isStr := val.(*Str)
-	if !isStr {
-		return nil, typeError(val, "lower(str) -> str")
-	}
-	s := strings.ToLower(str.NativeValue)
-	return &Str{s}, nil
+var Lower = &Builtin{
+	Name: "lower",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				s := strings.ToLower(str.NativeValue)
+				return &Str{s}, nil
+			},
+		},
+	},
 }
 
-func Upper(args ...Value) (Value, error) {
-	val := args[0]
-	str, isStr := val.(*Str)
-	if !isStr {
-		return nil, typeError(val, "upper(str) -> str")
-	}
-	s := strings.ToUpper(str.NativeValue)
-	return &Str{s}, nil
+var Upper = &Builtin{
+	Name: "upper",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				s := strings.ToUpper(str.NativeValue)
+				return &Str{s}, nil
+			},
+		},
+	},
 }
 
-func Title(args ...Value) (Value, error) {
-	val := args[0]
-	str, isStr := val.(*Str)
-	if !isStr {
-		return nil, typeError(val, "title(str) -> str")
-	}
-	s := strings.ToTitle(str.NativeValue)
-	return &Str{s}, nil
+var Strip = &Builtin{
+	Name: "strip",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				s := strings.TrimSpace(str.NativeValue)
+				return &Str{s}, nil
+			},
+		},
+	},
 }
 
-func Strip(args ...Value) (Value, error) {
-	val := args[0]
-	str, isStr := val.(*Str)
-	if !isStr {
-		return nil, typeError(val, "strip(str) -> str")
-	}
-	s := strings.TrimSpace(str.NativeValue)
-	return &Str{s}, nil
+var CastBool = &Builtin{
+	Name: "bool",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Bool{},
+				},
+				Returns: &Bool{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				return args[0], nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Bool{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				return ParseBool(str.NativeValue), nil
+			},
+		},
+	},
 }
 
-func CastBool(args ...Value) (Value, error) {
-	val := args[0]
-	switch t := val.(type) {
-	case *Bool:
-		return t, nil
-	case *Str:
-		return ParseBool(t.NativeValue), nil
-	default:
-		return nil, typeError(val, "bool(bool|str) -> bool")
-	}
+var CastInt = &Builtin{
+	Name: "int",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Int{},
+				},
+				Returns: &Int{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				return args[0], nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Float{},
+				},
+				Returns: &Int{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				f := args[0].(*Float)
+				return &Int{int(f.NativeValue)}, nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Int{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				return ParseInt(str.NativeValue), nil
+			},
+		},
+	},
 }
 
-func CastInt(args ...Value) (Value, error) {
-	val := args[0]
-	switch t := val.(type) {
-	case *Int:
-		return t, nil
-	case *Float:
-		return &Int{int(t.NativeValue)}, nil
-	case *Str:
-		return ParseInt(t.NativeValue), nil
-	default:
-		return nil, typeError(val, "int(int|float|str) -> int")
-	}
+var CastFloat = &Builtin{
+	Name: "float",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Int{},
+				},
+				Returns: &Float{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				i := args[0].(*Int)
+				return &Float{float64(i.NativeValue)}, nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Float{},
+				},
+				Returns: &Float{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				return args[0], nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Float{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				return ParseFloat(str.NativeValue), nil
+			},
+		},
+	},
 }
 
-func CastFloat(args ...Value) (Value, error) {
-	val := args[0]
-	switch t := val.(type) {
-	case *Int:
-		return &Float{float64(t.NativeValue)}, nil
-	case *Float:
-		return t, nil
-	case *Str:
-		return ParseFloat(t.NativeValue), nil
-	default:
-		return nil, typeError(val, "float(int|float|str) -> float")
-	}
+var CastStr = &Builtin{
+	Name: "str",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Bool{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				b := args[0].(*Bool)
+				if b.NativeValue {
+					return &Str{"true"}, nil
+				}
+				return &Str{"false"}, nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Int{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				i := args[0].(*Int)
+				return &Str{fmt.Sprintf("%d", i.NativeValue)}, nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Float{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				f := args[0].(*Float)
+				return &Str{fmt.Sprintf("%f", f.NativeValue)}, nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				return args[0], nil
+			},
+		},
+	},
 }
 
-func CastStr(args ...Value) (Value, error) {
-	val := args[0]
-	switch t := val.(type) {
-	case *Bool:
-		if t.NativeValue {
-			return &Str{"true"}, nil
+var Builtins = []*Builtin{
+	Lower,
+	Upper,
+	Strip,
+	CastBool,
+	CastInt,
+	CastFloat,
+	CastStr,
+}
+
+func LookupBuiltin(funcName string) int {
+	for i, builtin := range Builtins {
+		if builtin.Name == funcName {
+			return i
 		}
-		return &Str{"false"}, nil
-	case *Int:
-		return &Str{fmt.Sprintf("%d", t.NativeValue)}, nil
-	case *Float:
-		return &Str{fmt.Sprintf("%f", t.NativeValue)}, nil
-	case *Str:
-		return t, nil
-	default:
-		return nil, typeError(val, "str(bool|int|float|str) -> str")
 	}
+	return -1
 }
