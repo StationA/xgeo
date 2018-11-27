@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	gx "github.com/stationa/xgeo/vm"
+	"github.com/stationa/xgeo/gx"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 )

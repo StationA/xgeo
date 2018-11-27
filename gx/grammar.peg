@@ -1,4 +1,4 @@
-package vm
+package gx
 
 type XGeoCompiler Peg {
     constants     []Value
