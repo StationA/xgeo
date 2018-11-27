@@ -153,6 +153,29 @@ var Substr = &Builtin{
 	},
 }
 
+var Replace = &Builtin{
+	Name: "replace",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+					&Str{},
+					&Str{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				oldStr := args[1].(*Str)
+				newStr := args[2].(*Str)
+				replaced := strings.Replace(str.NativeValue, oldStr.NativeValue, newStr.NativeValue, -1)
+				return &Str{replaced}, nil
+			},
+		},
+	},
+}
+
 var CastBool = &Builtin{
 	Name: "bool",
 	NativeCalls: []*NativeCall{
@@ -325,6 +348,7 @@ var Builtins = []*Builtin{
 	Upper,
 	Strip,
 	Substr,
+	Replace,
 	CastBool,
 	CastInt,
 	CastFloat,
