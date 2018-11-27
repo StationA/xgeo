@@ -7,3 +7,17 @@ d = -20
 emit abs(d)
 e = -1.1
 emit abs(e)
+emit "SQRT OF 9"
+emit sqrt(9)
+emit "SQRT OF 2"
+emit sqrt(2)
+emit "SQRT OF Pi"
+emit sqrt(3.14159)
+emit "ROUND 0.4"
+emit round(0.4)
+emit "ROUND 0.5"
+emit round(0.5)
+emit "ROUND Pi TO 2 DECIMAL PLACES"
+emit round(3.14159, 2)
+emit "ROUND e TO 2 DECIMAL PLACES"
+emit round(2.718281828459045235360287, 2)

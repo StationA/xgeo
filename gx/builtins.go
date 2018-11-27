@@ -68,6 +68,8 @@ var Builtins = []*Builtin{
 	Replace,
 	// Math builtins
 	Abs,
+	Round,
+	Sqrt,
 	// Type builtins
 	CastBool,
 	CastInt,
