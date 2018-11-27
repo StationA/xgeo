@@ -120,6 +120,43 @@ var Strip = &Builtin{
 	},
 }
 
+var Substr = &Builtin{
+	Name: "substr",
+	NativeCalls: []*NativeCall{
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+					&Int{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				start := args[1].(*Int)
+				return &Str{str.NativeValue[start.NativeValue:]}, nil
+			},
+		},
+		&NativeCall{
+			Signature: &Signature{
+				Accepts: []Value{
+					&Str{},
+					&Int{},
+					&Int{},
+				},
+				Returns: &Str{},
+			},
+			Call: func(args ...Value) (Value, error) {
+				str := args[0].(*Str)
+				start := args[1].(*Int)
+				end := args[2].(*Int)
+				substr := str.NativeValue[start.NativeValue:end.NativeValue]
+				return &Str{substr}, nil
+			},
+		},
+	},
+}
+
 var CastBool = &Builtin{
 	Name: "bool",
 	NativeCalls: []*NativeCall{
@@ -291,6 +328,7 @@ var Builtins = []*Builtin{
 	Lower,
 	Upper,
 	Strip,
+	Substr,
 	CastBool,
 	CastInt,
 	CastFloat,
