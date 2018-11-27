@@ -13,9 +13,9 @@ type Value interface {
 	Eq(Value) (*Bool, error)
 	Neq(Value) (*Bool, error)
 	Gt(Value) (*Bool, error)
-    Gte(Value) (*Bool, error)
+	Gte(Value) (*Bool, error)
 	Lt(Value) (*Bool, error)
-    Lte(Value) (*Bool, error)
+	Lte(Value) (*Bool, error)
 	Raw() interface{}
 	Type() string
 	String() string
