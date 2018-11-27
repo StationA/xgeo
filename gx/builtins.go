@@ -59,10 +59,6 @@ func (b *Builtin) Call(args ...Value) (Value, error) {
 	return nil, fmt.Errorf("No matching function call: %s", expectedCall)
 }
 
-func typeError(val Value, funcSig string) error {
-	return fmt.Errorf("Invalid type %T for function %s", val, funcSig)
-}
-
 var Lower = &Builtin{
 	Name: "lower",
 	NativeCalls: []*NativeCall{
