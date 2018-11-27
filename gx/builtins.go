@@ -66,6 +66,8 @@ var Builtins = []*Builtin{
 	Strip,
 	Substr,
 	Replace,
+	// Math builtins
+	Abs,
 	// Type builtins
 	CastBool,
 	CastInt,

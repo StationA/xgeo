@@ -2,3 +2,8 @@ a = 10
 b = 20.0
 c = (a + b) ^ 2
 emit c
+emit "ABS NEGATIVE"
+d = -20
+emit abs(d)
+e = -1.1
+emit abs(e)
