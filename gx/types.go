@@ -2,6 +2,7 @@ package gx
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -10,6 +11,7 @@ type Value interface {
 	Sub(Value) (Value, error)
 	Mul(Value) (Value, error)
 	Div(Value) (Value, error)
+	Exp(Value) (Value, error)
 	Eq(Value) (*Bool, error)
 	Neq(Value) (*Bool, error)
 	Gt(Value) (*Bool, error)
@@ -103,6 +105,16 @@ func (i *Int) Div(val Value) (Value, error) {
 		return &Float{float64(i.NativeValue) / val.NativeValue}, nil
 	}
 	return nil, InvalidOperation("/", i, val)
+}
+
+func (i *Int) Exp(val Value) (Value, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Int{int(math.Pow(float64(i.NativeValue), float64(val.NativeValue)))}, nil
+	case *Float:
+		return &Float{math.Pow(float64(i.NativeValue), val.NativeValue)}, nil
+	}
+	return nil, InvalidOperation("^", i, val)
 }
 
 func (i *Int) Eq(val Value) (*Bool, error) {
@@ -221,6 +233,16 @@ func (f *Float) Div(val Value) (Value, error) {
 	return nil, InvalidOperation("/", f, val)
 }
 
+func (f *Float) Exp(val Value) (Value, error) {
+	switch val := val.(type) {
+	case *Int:
+		return &Float{math.Pow(f.NativeValue, float64(val.NativeValue))}, nil
+	case *Float:
+		return &Float{math.Pow(f.NativeValue, val.NativeValue)}, nil
+	}
+	return nil, InvalidOperation("^", f, val)
+}
+
 func (f *Float) Eq(val Value) (*Bool, error) {
 	switch val := val.(type) {
 	case *Int:
@@ -313,6 +335,10 @@ func (b *Bool) Div(val Value) (Value, error) {
 	return nil, InvalidOperation("/", b, val)
 }
 
+func (b *Bool) Exp(val Value) (Value, error) {
+	return nil, InvalidOperation("^", b, val)
+}
+
 func (b *Bool) Eq(val Value) (*Bool, error) {
 	switch val := val.(type) {
 	case *Bool:
@@ -381,6 +407,10 @@ func (s *Str) Div(val Value) (Value, error) {
 	return nil, InvalidOperation("/", s, val)
 }
 
+func (s *Str) Exp(val Value) (Value, error) {
+	return nil, InvalidOperation("^", s, val)
+}
+
 func (s *Str) Eq(val Value) (*Bool, error) {
 	switch val := val.(type) {
 	case *Str:
@@ -443,6 +473,10 @@ func (r *Raw) Mul(val Value) (Value, error) {
 
 func (r *Raw) Div(val Value) (Value, error) {
 	return nil, InvalidOperation("/", r, val)
+}
+
+func (r *Raw) Exp(val Value) (Value, error) {
+	return nil, InvalidOperation("^", r, val)
 }
 
 func (r *Raw) Eq(val Value) (*Bool, error) {

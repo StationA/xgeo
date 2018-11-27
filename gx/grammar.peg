@@ -80,10 +80,14 @@ add_expr <- mult_expr (ws (
   / '-' ws mult_expr { p.EmitCode(OpSUB) }
 ))*
 
-mult_expr <- primary (ws (
-    '*' ws primary { p.EmitCode(OpMUL) }
-  / '/' ws primary { p.EmitCode(OpDIV) }
+mult_expr <- exp_expr (ws (
+    '*' ws exp_expr { p.EmitCode(OpMUL) }
+  / '/' ws exp_expr { p.EmitCode(OpDIV) }
 ))*
+
+exp_expr <- primary (ws (
+    '^' ws primary { p.EmitCode(OpEXP) }
+))?
 
 func_call <- <ref> {
     p.StartCall(buffer[begin:end])

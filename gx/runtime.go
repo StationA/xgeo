@@ -123,6 +123,11 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 		left := vm.pop()
 		res, _ := left.Div(right)
 		vm.push(res)
+	case OpEXP:
+		right := vm.pop()
+		left := vm.pop()
+		res, _ := left.Exp(right)
+		vm.push(res)
 	case OpEQ:
 		right := vm.pop()
 		left := vm.pop()

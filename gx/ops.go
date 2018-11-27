@@ -30,6 +30,7 @@ const (
 	OpSUB
 	OpMUL
 	OpDIV
+	OpEXP
 )
 
 type Code struct {
