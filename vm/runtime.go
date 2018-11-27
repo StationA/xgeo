@@ -77,10 +77,6 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 	code := vm.Code[vm.pc]
 	jmp := 1
 	switch code.Op {
-	case OpDUP:
-		val := vm.pop()
-		vm.push(val)
-		vm.push(val)
 	case OpCONST:
 		index := code.Args[0]
 		if index >= len(vm.Constants) {
@@ -157,7 +153,16 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 		left := vm.pop()
 		res, _ := left.Lte(right)
 		vm.push(res)
-	case OpCOND:
+	case OpJMP:
+		ip := code.Args[0]
+		jmp = ip - vm.pc
+	case OpJMPT:
+		shouldJump := vm.pop().(*Bool).NativeValue
+		if shouldJump {
+			ip := code.Args[0]
+			jmp = ip - vm.pc
+		}
+	case OpJMPF:
 		shouldJump := !vm.pop().(*Bool).NativeValue
 		if shouldJump {
 			ip := code.Args[0]

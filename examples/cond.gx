@@ -1,20 +1,4 @@
-a = true
-b = false
-c = true
-
-if (a) {
-    if (b) {
-        if (c) {
-            value = true
-        } else {
-            value = false
-        }
-    } else {
-        value = false
-    }
-} else {
-    value = false
-}
-
-// value = a && b && c
-// emit value
+a = 10
+b = 20
+c = a > 10 || b < 20
+emit c

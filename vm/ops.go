@@ -8,7 +8,9 @@ import (
 type Op byte
 
 const (
-	OpCOND Op = iota
+	OpJMP Op = iota
+	OpJMPT
+	OpJMPF
 	OpLABEL
 	OpEMIT
 	OpSTORE
@@ -17,7 +19,6 @@ const (
 	OpDEREF
 	OpMUT
 	OpCONST
-	OpDUP
 	OpEQ
 	OpNEQ
 	OpLT

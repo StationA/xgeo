@@ -14,22 +14,29 @@ section <- comment / block / stmt
 
 comment <- '//' (!'\n' .)* wsn
 
-block <- if_block
+block <- if_else_block / if_block
 
-if_block <- if_cond '{' wsn section* wsn '}' wsn (else_block wsn)? {
+if_block <- if_cond '{' wsn section* wsn '}' wsn {
     p.SetJump()
 }
 
+if_else_block <- if_cond '{' wsn section* wsn '}' wsn {
+    p.SetJumpAfter()
+    p.EmitJump()
+} else_block wsn
+
 if_cond <- 'if' ws '(' ws expr ws ')' wsn {
-    p.AddCondJump()
+    p.EmitJumpIfFalse()
 }
 
-else_block <- 'else' wsn '{' wsn section* wsn '}' wsn
+else_block <- 'else' wsn '{' wsn section* wsn '}' wsn {
+    p.SetJump()
+}
 
 stmt <- (emit / assignment) wsn
 
 emit <- 'emit' ws expr {
-    p.AddCode(OpEMIT)
+    p.EmitCode(OpEMIT)
 }
 
 assignment <- global_assignment / var_assignment
@@ -37,50 +44,54 @@ assignment <- global_assignment / var_assignment
 global_assignment <- <global_ref> {
     p.PrepareMutate(buffer[begin:end])
 } ws '=' ws expr {
-    p.AddCode(OpMUT)
+    p.EmitCode(OpMUT)
 }
 
 var_assignment <- <variable_ref> {
     p.AllocateRef(buffer[begin:end])
 } ws '=' ws expr {
-    p.AddStore()
+    p.EmitStore()
 }
 
 expr <- or_expr / primary
 
 primary <- '(' ws expr ws ')' / func_call / literal / deref
 
-or_expr <- and_expr (ws '||' ws expr)*
+or_expr <- and_expr (or_rhs+ { p.EmitJumpAfter(); p.EmitConstant(&Bool{true}) })?
 
-and_expr <- compare_expr (ws '&&' { p.AddCondJump() } ws expr { p.SetJump() })*
+or_rhs <- { p.EmitJumpIfTrue() } ws '||' ws and_expr { p.SetJumpAfter() }
+
+and_expr <- compare_expr (and_rhs+ { p.EmitJumpAfter(); p.EmitConstant(&Bool{false}) })?
+
+and_rhs <- { p.EmitJumpIfFalse() } ws '&&' ws compare_expr { p.SetJumpAfter() }
 
 compare_expr <- add_expr (ws (
-    '==' ws expr { p.AddCode(OpEQ) }
-  / '!=' ws expr { p.AddCode(OpNEQ) }
-  / '<' ws expr { p.AddCode(OpLT) }
-  / '<=' ws expr { p.AddCode(OpLTE) }
-  / '>' ws expr { p.AddCode(OpGT) }
-  / '>=' ws expr { p.AddCode(OpGTE) }
-))*
+    '==' ws add_expr { p.EmitCode(OpEQ) }
+  / '!=' ws add_expr { p.EmitCode(OpNEQ) }
+  / '<' ws add_expr { p.EmitCode(OpLT) }
+  / '<=' ws add_expr { p.EmitCode(OpLTE) }
+  / '>' ws add_expr { p.EmitCode(OpGT) }
+  / '>=' ws add_expr { p.EmitCode(OpGTE) }
+))?
 
 add_expr <- mult_expr (ws (
-    '+' ws expr { p.AddCode(OpADD) }
-  / '-' ws expr { p.AddCode(OpSUB) }
+    '+' ws mult_expr { p.EmitCode(OpADD) }
+  / '-' ws mult_expr { p.EmitCode(OpSUB) }
 ))*
 
 mult_expr <- primary (ws (
-    '*' ws expr { p.AddCode(OpMUL) }
-  / '/' ws expr { p.AddCode(OpDIV) }
+    '*' ws primary { p.EmitCode(OpMUL) }
+  / '/' ws primary { p.EmitCode(OpDIV) }
 ))*
 
 func_call <- deref '(' wsn (expr (wsn ',' wsn expr)*)? wsn ')' {
-    p.AddCode(OpCALL)
+    p.EmitCode(OpCALL)
 }
 
 ref <- global_ref / variable_ref
 
 deref <- <ref> {
-    p.AddLoad(buffer[begin:end])
+    p.EmitLoad(buffer[begin:end])
 }
 
 global_ref <- '@' (ident ('.' ident)*)?
@@ -92,19 +103,19 @@ ident <- [A-Za-z_][A-Za-z0-9_]*
 literal <- bool / float / int / string
 
 float <- <'-'? [0-9]+ '.' [0-9]*> {
-    p.AddConstant(ParseFloat(buffer[begin:end]))
+    p.EmitConstant(ParseFloat(buffer[begin:end]))
 }
 
 int <- <'-'? [0-9]+> {
-    p.AddConstant(ParseInt(buffer[begin:end]))
+    p.EmitConstant(ParseInt(buffer[begin:end]))
 }
 
 bool <- <'true' / 'false'> {
-    p.AddConstant(ParseBool(buffer[begin:end]))
+    p.EmitConstant(ParseBool(buffer[begin:end]))
 }
 
 string <- '"' <[^"]*> '"' {
-    p.AddConstant(&Str{buffer[begin:end]})
+    p.EmitConstant(&Str{buffer[begin:end]})
 }
 
 ws <- (' ' / '\t')*

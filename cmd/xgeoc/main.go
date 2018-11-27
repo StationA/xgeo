@@ -8,7 +8,10 @@ import (
 )
 
 var (
-	gxFile = kingpin.Arg("gx", "GX script").Required().File()
+	debug       = kingpin.Flag("debug", "Debug mode").Short('d').Bool()
+	dumpOnCrash = kingpin.Flag("dump-on-crash", "Dumps the VM state on crash").Short('x').Bool()
+	test        = kingpin.Flag("test", "Test the GX script with no input").Short('t').Bool()
+	gxFile      = kingpin.Arg("gx", "GX script").Required().File()
 )
 
 func main() {
@@ -29,6 +32,27 @@ func main() {
 		panic(err)
 	}
 	vm := compiler.InitVM()
-	vm.DumpConstants()
-	vm.DumpCode()
+
+	if *debug {
+		compiler.PrintSyntaxTree()
+		vm.SetDebug(true)
+		if !*test {
+			vm.DumpConstants()
+			vm.DumpCode()
+		}
+	}
+	if *dumpOnCrash {
+		vm.SetDumpOnCrash(true)
+	}
+
+	if *test {
+		output := make(chan interface{})
+		go func() {
+			defer close(output)
+			vm.Run(nil, output)
+		}()
+		for o := range output {
+			fmt.Println(o)
+		}
+	}
 }

@@ -10,9 +10,24 @@ func (c *XGeoCompiler) Prepare() {
 	c.refs = make(map[string]int)
 }
 
-func (c *XGeoCompiler) AddCondJump() {
-	code := c.AddCode(OpCOND, -1)
+func (c *XGeoCompiler) EmitJumpIfFalse() {
+	code := c.EmitCode(OpJMPF, -1)
 	c.jumpStack = append(c.jumpStack, code)
+}
+
+func (c *XGeoCompiler) EmitJumpIfTrue() {
+	code := c.EmitCode(OpJMPT, -1)
+	c.jumpStack = append(c.jumpStack, code)
+}
+
+func (c *XGeoCompiler) EmitJump() {
+	code := c.EmitCode(OpJMP, -1)
+	c.jumpStack = append(c.jumpStack, code)
+}
+
+func (c *XGeoCompiler) EmitJumpAfter() {
+	after := len(c.code) + 2
+	c.EmitCode(OpJMP, after)
 }
 
 func (c *XGeoCompiler) SetJump() {
@@ -22,16 +37,23 @@ func (c *XGeoCompiler) SetJump() {
 	c.jumpStack = c.jumpStack[:l]
 }
 
-func (c *XGeoCompiler) AddConstant(val Value) {
+func (c *XGeoCompiler) SetJumpAfter() {
+	l := len(c.jumpStack) - 1
+	lastJump := c.jumpStack[l]
+	lastJump.Args[0] = len(c.code) + 1
+	c.jumpStack = c.jumpStack[:l]
+}
+
+func (c *XGeoCompiler) EmitConstant(val Value) {
 	index := len(c.constants)
 	for i, constant := range c.constants {
 		// Reuse duplicate constants
-		if constant == val {
-			c.AddCode(OpCONST, i)
+		if constant.Raw() == val.Raw() {
+			c.EmitCode(OpCONST, i)
 			return
 		}
 	}
-	c.AddCode(OpCONST, index)
+	c.EmitCode(OpCONST, index)
 	c.constants = append(c.constants, val)
 }
 
@@ -50,29 +72,29 @@ func (c *XGeoCompiler) PrepareMutate(ref string) {
 	if path == "" {
 		panic("Cannot mutate the entire input")
 	}
-	c.AddCode(OpLOADG)
+	c.EmitCode(OpLOADG)
 	pathParts := strings.Split(path, ".")
 	l := len(pathParts) - 1
 	for _, prop := range pathParts[:l] {
-		c.AddConstant(&Str{prop})
-		c.AddCode(OpDEREF)
+		c.EmitConstant(&Str{prop})
+		c.EmitCode(OpDEREF)
 	}
-	c.AddConstant(&Str{pathParts[l]})
+	c.EmitConstant(&Str{pathParts[l]})
 }
 
-func (c *XGeoCompiler) AddStore() {
+func (c *XGeoCompiler) EmitStore() {
 	register := c.registerCount - 1
-	c.AddCode(OpSTORE, register)
+	c.EmitCode(OpSTORE, register)
 }
 
-func (c *XGeoCompiler) AddLoad(ref string) {
+func (c *XGeoCompiler) EmitLoad(ref string) {
 	if strings.HasPrefix(ref, "@") {
 		path := ref[1:]
-		c.AddCode(OpLOADG)
+		c.EmitCode(OpLOADG)
 		if path != "" {
 			for _, prop := range strings.Split(path, ".") {
-				c.AddConstant(&Str{prop})
-				c.AddCode(OpDEREF)
+				c.EmitConstant(&Str{prop})
+				c.EmitCode(OpDEREF)
 			}
 		}
 	} else {
@@ -80,11 +102,11 @@ func (c *XGeoCompiler) AddLoad(ref string) {
 		if !refExists {
 			panic(fmt.Errorf("Undefined reference: %s", ref))
 		}
-		c.AddCode(OpLOAD, register)
+		c.EmitCode(OpLOAD, register)
 	}
 }
 
-func (c *XGeoCompiler) AddCode(op Op, args ...int) *Code {
+func (c *XGeoCompiler) EmitCode(op Op, args ...int) *Code {
 	code := &Code{op, args}
 	c.code = append(c.code, code)
 	return code
