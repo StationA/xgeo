@@ -76,6 +76,9 @@ var Builtins = []*Builtin{
 	Sqft2Sqm,
 	Sqm2Sqft,
 	Sqrt,
+	// Feature builtins
+	NewProperties,
+	DeleteProperty,
 	// Type builtins
 	CastBool,
 	CastInt,

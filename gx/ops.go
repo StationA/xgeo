@@ -15,7 +15,6 @@ const (
 	OpEMIT
 	OpSTORE
 	OpLOAD
-	OpLOADG
 	OpDEREF
 	OpMUT
 	OpCONST

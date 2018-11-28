@@ -10,21 +10,17 @@ const (
 )
 
 type XGeoVM struct {
-	Constants     []Value
-	Code          []*Code
-	dumpOnCrash   bool
-	debug         bool
-	registerCount int
-	registers     []Value
-	stack         []Value
-	pc            int
+	Constants   []Value
+	Code        []*Code
+	dumpOnCrash bool
+	debug       bool
+	env         map[string]Value
+	stack       []Value
+	pc          int
 }
 
-func NewVM(registerCount int) *XGeoVM {
-	return &XGeoVM{
-		registerCount: registerCount,
-		registers:     make([]Value, registerCount),
-	}
+func NewVM() *XGeoVM {
+	return &XGeoVM{}
 }
 
 func (vm *XGeoVM) SetDumpOnCrash(doIt bool) {
@@ -36,9 +32,19 @@ func (vm *XGeoVM) SetDebug(debug bool) {
 }
 
 func (vm *XGeoVM) Reset() {
-	vm.registers = make([]Value, RegisterCount)
+	vm.env = make(map[string]Value)
 	vm.stack = []Value{}
 	vm.pc = 0
+}
+
+func (vm *XGeoVM) SetGlobals(input interface{}) {
+	if input != nil {
+		feature := input.(*model.Feature)
+		vm.env["@id"] = &Raw{feature.ID}
+		vm.env["@type"] = &Str{feature.Type}
+		vm.env["@properties"] = &Raw{feature.Properties}
+		vm.env["@geometry"] = &Raw{feature.Geometry}
+	}
 }
 
 func (vm *XGeoVM) Run(input interface{}, output chan interface{}) error {
@@ -51,6 +57,7 @@ func (vm *XGeoVM) Run(input interface{}, output chan interface{}) error {
 		}
 	}()
 	vm.Reset()
+	vm.SetGlobals(input)
 	if vm.debug {
 		vm.DumpConstants()
 		vm.DumpCode()
@@ -83,8 +90,6 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 			panic("Invalid constant access")
 		}
 		vm.push(vm.Constants[index])
-	case OpLOADG:
-		vm.push(&Raw{input})
 	case OpDEREF:
 		prop := vm.pop().(*Str).NativeValue
 		ctx := vm.pop()
@@ -92,17 +97,18 @@ func (vm *XGeoVM) step(input interface{}, output chan interface{}) (bool, error)
 		vm.push(res)
 	case OpMUT:
 		val := vm.pop()
-		prop := vm.pop().(*Str).NativeValue
+		key := vm.pop().(*Str).NativeValue
 		ctx := vm.pop()
-		vm.mut(ctx, prop, val)
+		vm.mut(ctx, key, val)
 	case OpLOAD:
-		register := code.Args[0]
-		val := vm.registers[register]
+		key := vm.pop().(*Str).NativeValue
+		// TODO: Handle the undefined var case
+		val := vm.env[key]
 		vm.push(val)
 	case OpSTORE:
 		val := vm.pop()
-		register := code.Args[0]
-		vm.registers[register] = val
+		key := vm.pop().(*Str).NativeValue
+		vm.env[key] = val
 	case OpADD:
 		right := vm.pop()
 		left := vm.pop()
@@ -214,8 +220,6 @@ func (vm *XGeoVM) pop() Value {
 func (vm *XGeoVM) deref(val Value, prop string) (Value, error) {
 	raw := val.Raw()
 	switch raw := raw.(type) {
-	case *model.Feature:
-		return vm.access(raw, prop), nil
 	case map[string]string:
 		return &Str{raw[prop]}, nil
 	default:
@@ -226,8 +230,6 @@ func (vm *XGeoVM) deref(val Value, prop string) (Value, error) {
 func (vm *XGeoVM) mut(ctx Value, prop string, val Value) error {
 	raw := ctx.Raw()
 	switch raw := raw.(type) {
-	case *model.Feature:
-		return vm.mutate(raw, prop, val)
 	case map[string]string:
 		raw[prop] = val.Raw().(string)
 	default:

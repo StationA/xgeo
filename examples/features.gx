@@ -1,0 +1,6 @@
+// _ = delete(@properties, "count")
+// @properties.display = upper(delete(@properties, "visible"))
+out = newProps()
+out.display = upper(@properties.visible)
+@properties = out
+emit @

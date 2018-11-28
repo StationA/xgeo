@@ -4,8 +4,6 @@ type XGeoCompiler Peg {
     constants     []Value
     code          []*Code
     jumpStack     []*Code
-    registerCount int
-    refs          map[string]int
     callStack     []*Code
 }
 
@@ -34,24 +32,22 @@ else_block <- 'else' wsn '{' wsn section* wsn '}' wsn {
     p.SetJump()
 }
 
-stmt <- (emit / assignment) wsn
+stmt <- (emit / assignment / mutate) wsn
 
 emit <- 'emit' ws expr {
     p.EmitCode(OpEMIT)
 }
 
-assignment <- global_assignment / var_assignment
+assignment <- <global_ref / variable_ref> {
+    p.EmitConstant(&Str{buffer[begin:end]})
+} ws '=' ws expr {
+    p.EmitCode(OpSTORE)
+}
 
-global_assignment <- <global_ref> {
+mutate <- <deep_ref> {
     p.PrepareMutate(buffer[begin:end])
 } ws '=' ws expr {
     p.EmitCode(OpMUT)
-}
-
-var_assignment <- <variable_ref> {
-    p.AllocateRef(buffer[begin:end])
-} ws '=' ws expr {
-    p.EmitStore()
 }
 
 expr <- or_expr / primary
@@ -97,11 +93,13 @@ func_call <- <ref> {
 
 ref <- global_ref / variable_ref
 
-deref <- <ref> {
+deref <- <deep_ref / ref> {
     p.EmitLoad(buffer[begin:end])
 }
 
-global_ref <- '@' (ident ('.' ident)*)?
+deep_ref <- (global_ref / variable_ref) '.' ident
+
+global_ref <- '@' ident?
 
 variable_ref <- ident
 

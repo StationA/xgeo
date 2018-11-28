@@ -1,7 +1,7 @@
 package model
 
 type Feature struct {
-	ID         interface{}       `json:"id"`
+	ID         interface{}       `json:"id,omitempty"`
 	Type       string            `json:"type"`
 	Properties map[string]string `json:"properties"`
 	Geometry   interface{}       `json:"geometry"`

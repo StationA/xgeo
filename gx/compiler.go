@@ -1,13 +1,11 @@
 package gx
 
 import (
-	"fmt"
 	"strings"
 )
 
 func (c *XGeoCompiler) Prepare() {
 	c.Init()
-	c.refs = make(map[string]int)
 }
 
 func (c *XGeoCompiler) StartCall(funcName string) {
@@ -79,52 +77,24 @@ func (c *XGeoCompiler) EmitConstant(val Value) {
 	c.constants = append(c.constants, val)
 }
 
-func (c *XGeoCompiler) AllocateRef(ref string) {
-	register, refExists := c.refs[ref]
-	if !refExists {
-		register = c.registerCount
-		c.refs[ref] = register
-		c.registerCount += 1
-	}
+func (c *XGeoCompiler) PrepareMutate(path string) {
+	pathParts := strings.SplitN(path, ".", 2)
+	ctx := pathParts[0]
+	c.EmitConstant(&Str{ctx})
+	c.EmitCode(OpLOAD)
+	prop := pathParts[1]
+	c.EmitConstant(&Str{prop})
 }
 
-func (c *XGeoCompiler) PrepareMutate(ref string) {
-	// Trim off the leading "@"
-	path := ref[1:]
-	if path == "" {
-		panic("Cannot mutate the entire input")
-	}
-	c.EmitCode(OpLOADG)
-	pathParts := strings.Split(path, ".")
-	l := len(pathParts) - 1
-	for _, prop := range pathParts[:l] {
+func (c *XGeoCompiler) EmitLoad(path string) {
+	pathParts := strings.SplitN(path, ".", 2)
+	ctx := pathParts[0]
+	c.EmitConstant(&Str{ctx})
+	c.EmitCode(OpLOAD)
+	if len(pathParts) == 2 {
+		prop := pathParts[1]
 		c.EmitConstant(&Str{prop})
 		c.EmitCode(OpDEREF)
-	}
-	c.EmitConstant(&Str{pathParts[l]})
-}
-
-func (c *XGeoCompiler) EmitStore() {
-	register := c.registerCount - 1
-	c.EmitCode(OpSTORE, register)
-}
-
-func (c *XGeoCompiler) EmitLoad(ref string) {
-	if strings.HasPrefix(ref, "@") {
-		path := ref[1:]
-		c.EmitCode(OpLOADG)
-		if path != "" {
-			for _, prop := range strings.Split(path, ".") {
-				c.EmitConstant(&Str{prop})
-				c.EmitCode(OpDEREF)
-			}
-		}
-	} else {
-		register, refExists := c.refs[ref]
-		if !refExists {
-			panic(fmt.Errorf("Undefined reference: %s", ref))
-		}
-		c.EmitCode(OpLOAD, register)
 	}
 }
 
@@ -141,7 +111,7 @@ func (c *XGeoCompiler) Compile() error {
 }
 
 func (c *XGeoCompiler) InitVM() *XGeoVM {
-	v := NewVM(c.registerCount)
+	v := NewVM()
 	v.Constants = c.constants[:]
 	v.Code = c.code[:]
 	return v

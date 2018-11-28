@@ -4,9 +4,9 @@ package gx
 
 import "strconv"
 
-const _Op_name = "JMPJMPTJMPFLABELEMITSTORELOADLOADGDEREFMUTCONSTEQNEQLTLTEGTGTECALLADDSUBMULDIVEXP"
+const _Op_name = "JMPJMPTJMPFLABELEMITSTORELOADDEREFMUTCONSTEQNEQLTLTEGTGTECALLADDSUBMULDIVEXP"
 
-var _Op_index = [...]uint8{0, 3, 7, 11, 16, 20, 25, 29, 34, 39, 42, 47, 49, 52, 54, 57, 59, 62, 66, 69, 72, 75, 78, 81}
+var _Op_index = [...]uint8{0, 3, 7, 11, 16, 20, 25, 29, 34, 37, 42, 44, 47, 49, 52, 54, 57, 61, 64, 67, 70, 73, 76}
 
 func (i Op) String() string {
 	if i >= Op(len(_Op_index)-1) {

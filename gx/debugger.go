@@ -13,10 +13,10 @@ func (vm *XGeoVM) DumpConstants() {
 	}
 }
 
-func (vm *XGeoVM) DumpRegisters() {
-	fmt.Println("Registers:")
-	for i, val := range vm.registers[:vm.registerCount] {
-		fmt.Printf("  [%d] = %v\n", i, val)
+func (vm *XGeoVM) DumpEnv() {
+	fmt.Println("Env:")
+	for k, val := range vm.env {
+		fmt.Printf("  [%s] = %v\n", k, val)
 	}
 }
 
@@ -52,14 +52,14 @@ func (vm *XGeoVM) DumpCode() {
 
 func (vm *XGeoVM) DumpState() {
 	fmt.Print("====== VM STATE ======\n\n")
-	vm.DumpRegisters()
+	vm.DumpEnv()
 	vm.DumpStack()
 	fmt.Print("\n======================\n\n")
 }
 
 func (vm *XGeoVM) DumpStep() {
 	fmt.Printf("========= @%d =========\n\n", vm.pc)
-	vm.DumpRegisters()
+	vm.DumpEnv()
 	vm.DumpStack()
 	fmt.Println("Step:")
 	for i, code := range vm.Code {
