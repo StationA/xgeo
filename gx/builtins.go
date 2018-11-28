@@ -68,7 +68,13 @@ var Builtins = []*Builtin{
 	Replace,
 	// Math builtins
 	Abs,
+	Ceil,
+	Floor,
+	Ft2M,
+	M2Ft,
 	Round,
+	Sqft2Sqm,
+	Sqm2Sqft,
 	Sqrt,
 	// Type builtins
 	CastBool,

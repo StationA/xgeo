@@ -21,3 +21,15 @@ emit "ROUND Pi TO 2 DECIMAL PLACES"
 emit round(3.14159, 2)
 emit "ROUND e TO 2 DECIMAL PLACES"
 emit round(2.718281828459045235360287, 2)
+emit "CEIL Pi"
+emit ceil(3.14159)
+emit "FLOOR Pi"
+emit floor(3.14159)
+emit "3 M IN FT"
+emit m2ft(3)
+emit "20 FT IN M"
+emit ft2m(20)
+emit "3 M^2 IN FT^2"
+emit sqm2sqft(3)
+emit "20 FT^2 IN M^2"
+emit sqft2sqm(20)
