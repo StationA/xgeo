@@ -6,5 +6,5 @@ WORKDIR /go/src/github.com/stationa/xgeo
 RUN make release
 
 FROM scratch
-COPY --from=build /go/bin/xgeo /usr/local/bin/xgeo
+COPY --from=build /go/src/github.com/stationa/xgeo/target/xgeo /usr/local/bin/xgeo
 ENTRYPOINT ["/usr/local/bin/xgeo"]

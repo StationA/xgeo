@@ -1,4 +1,4 @@
-./xgeo
+target
 *.jsonlines
 *.geojson
 *.zip
