@@ -2,27 +2,24 @@ package io
 
 import (
 	"github.com/json-iterator/go"
-	"os"
+	"io"
 )
 
+const ParseBufferSize = 16 * 1024
+
 type GeoJSONReader struct {
-	inFile *os.File
+	input io.Reader
 }
 
-func NewGeoJSONReader(filename string) (*GeoJSONReader, error) {
-	inFile, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
+func NewGeoJSONReader(input io.Reader) (*GeoJSONReader, error) {
 	return &GeoJSONReader{
-		inFile: inFile,
+		input,
 	}, nil
 }
 
 func (g *GeoJSONReader) Read(out chan map[string]interface{}) error {
-	defer g.inFile.Close()
 	cfg := jsoniter.Config{}
-	dec := jsoniter.Parse(cfg.Froze(), g.inFile, 4096)
+	dec := jsoniter.Parse(cfg.Froze(), g.input, ParseBufferSize)
 	skipToFeatures(dec)
 	for dec.ReadArray() {
 		feature := dec.Read().(map[string]interface{})
